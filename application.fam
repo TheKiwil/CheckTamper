@@ -1,0 +1,22 @@
+# For details & more options, see documentation/AppManifests.md in firmware repo
+
+App(
+    appid="check_tamper",  # Must be unique
+    name="App check_tamper",  # Displayed in menus
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="check_tamper_app",
+    stack_size=2 * 1024,
+    sources=[
+        "*.c",
+    ],
+    fap_libs=["assets"],
+    requires=["gui", "storage"],
+    fap_category="Examples",
+    # Optional values
+    # fap_version="0.1",
+    fap_icon="icon.png",  # 10x10 1-bit PNG
+    # fap_description="A simple app",
+    # fap_author="J. Doe",
+    # fap_weburl="https://github.com/user/check_tamper",
+    fap_icon_assets="images",  # Image assets to compile for this application
+)
