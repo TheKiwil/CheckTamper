@@ -2,7 +2,7 @@
 
 App(
     appid="check_tamper",  # Must be unique
-    name="App check_tamper",  # Displayed in menus
+    name="Check_tamper",  # Displayed in menus
     apptype=FlipperAppType.EXTERNAL,
     entry_point="check_tamper_app",
     stack_size=2 * 1024,
@@ -10,7 +10,8 @@ App(
         "*.c",
     ],
     fap_libs=["assets"],
-    requires=["gui", "storage"],
+    requires=["gui"],
+    targets=["f7"],
     fap_category="Examples",
     # Optional values
     # fap_version="0.1",

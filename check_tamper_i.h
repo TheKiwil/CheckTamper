@@ -24,40 +24,18 @@
 #include <lib/nfc/nfc_types.h>
 #include <lib/nfc/nfc_worker.h>
 #include <lib/nfc/nfc_device.h>
-#include <lib/nfc/helpers/mf_classic_dict.h>
 #include <lib/nfc/parsers/nfc_supported_card.h>
 #include <lib/nfc/helpers/nfc_generators.h>
-
-#include "views/dict_attack.h"
-#include "views/detect_reader.h"
 
 #include "./scenes/check_tamper_scene.h"
 #include "./helpers/nfc_custom_event.h"
 
 #include <dialogs/dialogs.h>
-#include "rpc/rpc_app.h"
 #include <m-list.h>
 #include <m-array.h>
 
-ARRAY_DEF(FelicaAreaPath, FelicaArea*, M_PTR_OPLIST)
-ARRAY_DEF(MfClassicUserKeys, char*, M_PTR_OPLIST)
-
-#define NFC_TEXT_STORE_SIZE 128
-#define NFC_APP_FOLDER ANY_PATH("nfc")
-
-typedef struct {
-    FelicaSystem* selected_system;
-
-    FelicaAreaPath_t selected_areas;
-
-    FelicaService* selected_service;
-} FelicaSelectState;
-
-typedef enum {
-    CheckTamperRpcStateIdle,
-    CheckTamperRpcStateEmulating,
-    CheckTamperRpcStateEmulated,
-} CheckTamperRpcState;
+#define check_tamper_TEXT_STORE_SIZE 128
+#define check_tamper_APP_FOLDER ANY_PATH("nfc")
 
 struct CheckTamper {
     NfcWorker* worker;
@@ -68,14 +46,9 @@ struct CheckTamper {
     NfcDevice* dev;
     FuriHalNfcDevData dev_edit_data;
 
-    char text_store[NFC_TEXT_STORE_SIZE + 1];
+    char text_store[check_tamper_TEXT_STORE_SIZE + 1];
     FuriString* text_box_store;
     uint8_t byte_input_store[6];
-    MfClassicUserKeys_t mfc_key_strs; // Used in MFC key listing
-    FelicaSelectState felica_select;
-
-    void* rpc_ctx;
-    CheckTamperRpcState rpc_state;
 
     // Common Views
     Submenu* submenu;
@@ -87,8 +60,6 @@ struct CheckTamper {
     TextBox* text_box;
     VariableItemList* variable_item_list;
     Widget* widget;
-    DictAttack* dict_attack;
-    DetectReader* detect_reader;
 
     const NfcGenerator* generator;
 };

@@ -76,7 +76,7 @@ void check_tamper_scene_main_set_state(CheckTamper* check_tamper, check_tamperSc
             //popup_set_icon(popup, 0, 6, &I_RFIDDolphinSuccess_108x57);
             popup_set_context(popup, check_tamper);
             popup_set_callback(popup, check_tamper_scene_main_popup_callback);
-            popup_set_timeout(popup, 1500);
+            popup_set_timeout(popup, 50);
 
             view_dispatcher_switch_to_view(check_tamper->view_dispatcher, CheckTamperViewPopup);
             dolphin_deed(DolphinDeedNfcReadSuccess);
@@ -103,20 +103,24 @@ void check_tamper_scene_main_set_state(CheckTamper* check_tamper, check_tamperSc
 
 void check_tamper_scene_main_on_enter(void* context) {
     CheckTamper* check_tamper = context;
+    FURI_LOG_E(TAG, "4");
 
     nfc_device_clear(check_tamper->dev);
+
     // Setup view
     check_tamper_scene_main_set_state(check_tamper, check_tamperSceneMainStateDetecting);
     view_dispatcher_switch_to_view(check_tamper->view_dispatcher, CheckTamperViewPopup);
 
+    FURI_LOG_E(TAG, "2");
     // Start worker
     nfc_worker_start(
         check_tamper->worker,
-        NfcWorkerStateNfcVUnlockAndSave,
+        NfcWorkerStateRead,
         &check_tamper->dev->dev_data,
         check_tamper_scene_main_worker_callback,
         check_tamper);
 
+    FURI_LOG_E(TAG, "2");
     check_tamper_blink_read_start(check_tamper);
 }
 
@@ -150,6 +154,7 @@ void check_tamper_scene_main_on_exit(void* context) {
 
     // Stop worker
     nfc_worker_stop(check_tamper->worker);
+
     // Clear view
     popup_reset(check_tamper->popup);
     check_tamper_blink_stop(check_tamper);

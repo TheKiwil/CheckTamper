@@ -25,23 +25,38 @@ void check_tamper_blink_stop(CheckTamper* check_tamper) {
     notification_message(check_tamper->notifications, &sequence_blink_stop);
 }
 
-static void check_tamper_rpc_command_callback(RpcAppSystemEvent event, void* context) {
-    furi_assert(context);
+void check_tamper_text_store_set(CheckTamper* check_tamper, const char* text, ...) {
+    va_list args;
+    va_start(args, text);
+
+    vsnprintf(check_tamper->text_store, sizeof(check_tamper->text_store), text, args);
+
+    va_end(args);
+}
+
+void check_tamper_text_store_clear(CheckTamper* check_tamper) {
+    memset(check_tamper->text_store, 0, sizeof(check_tamper->text_store));
+}
+
+void check_tamper_blink_emulate_start(CheckTamper* check_tamper) {
+    notification_message(check_tamper->notifications, &sequence_blink_start_magenta);
+}
+
+void check_tamper_blink_detect_start(CheckTamper* check_tamper) {
+    notification_message(check_tamper->notifications, &sequence_blink_start_yellow);
+}
+
+void check_tamper_show_loading_popup(void* context, bool show) {
     CheckTamper* check_tamper = context;
+    TaskHandle_t timer_task = xTaskGetHandle(configTIMER_SERVICE_TASK_NAME);
 
-    furi_assert(check_tamper->rpc_ctx);
-
-    if(event == RpcAppEventSessionClose) {
-        view_dispatcher_send_custom_event(
-            check_tamper->view_dispatcher, NfcCustomEventRpcSessionClose);
-        rpc_system_app_set_callback(check_tamper->rpc_ctx, NULL, NULL);
-        check_tamper->rpc_ctx = NULL;
-    } else if(event == RpcAppEventAppExit) {
-        view_dispatcher_send_custom_event(check_tamper->view_dispatcher, NfcCustomEventViewExit);
-    } else if(event == RpcAppEventLoadFile) {
-        view_dispatcher_send_custom_event(check_tamper->view_dispatcher, NfcCustomEventRpcLoad);
+    if(show) {
+        // Raise timer priority so that animations can play
+        vTaskPrioritySet(timer_task, configMAX_PRIORITIES - 1);
+        view_dispatcher_switch_to_view(check_tamper->view_dispatcher, CheckTamperViewLoading);
     } else {
-        rpc_system_app_confirm(check_tamper->rpc_ctx, event, false);
+        // Restore default timer priority
+        vTaskPrioritySet(timer_task, configTIMER_TASK_PRIORITY);
     }
 }
 
@@ -60,10 +75,12 @@ CheckTamper* check_tamper_alloc() {
 
     // Nfc device
     check_tamper->dev = nfc_device_alloc();
-    furi_string_set(check_tamper->dev->folder, NFC_APP_FOLDER);
+    furi_string_set(check_tamper->dev->folder, check_tamper_APP_FOLDER);
 
     // Open GUI record
     check_tamper->gui = furi_record_open(RECORD_GUI);
+    view_dispatcher_attach_to_gui(
+        check_tamper->view_dispatcher, check_tamper->gui, ViewDispatcherTypeFullscreen);
 
     // Open Notification record
     check_tamper->notifications = furi_record_open(RECORD_NOTIFICATION);
@@ -87,6 +104,49 @@ CheckTamper* check_tamper_alloc() {
     view_dispatcher_add_view(
         check_tamper->view_dispatcher, CheckTamperViewPopup, popup_get_view(check_tamper->popup));
 
+    // Loading
+    check_tamper->loading = loading_alloc();
+    view_dispatcher_add_view(
+        check_tamper->view_dispatcher,
+        CheckTamperViewLoading,
+        loading_get_view(check_tamper->loading));
+
+    // Text Input
+    check_tamper->text_input = text_input_alloc();
+    view_dispatcher_add_view(
+        check_tamper->view_dispatcher,
+        CheckTamperViewTextInput,
+        text_input_get_view(check_tamper->text_input));
+
+    // Byte Input
+    check_tamper->byte_input = byte_input_alloc();
+    view_dispatcher_add_view(
+        check_tamper->view_dispatcher,
+        CheckTamperViewByteInput,
+        byte_input_get_view(check_tamper->byte_input));
+
+    // TextBox
+    check_tamper->text_box = text_box_alloc();
+    view_dispatcher_add_view(
+        check_tamper->view_dispatcher,
+        CheckTamperViewTextBox,
+        text_box_get_view(check_tamper->text_box));
+    check_tamper->text_box_store = furi_string_alloc();
+
+    // Variable Item List
+    check_tamper->variable_item_list = variable_item_list_alloc();
+    view_dispatcher_add_view(
+        check_tamper->view_dispatcher,
+        CheckTamperViewVarItemList,
+        variable_item_list_get_view(check_tamper->variable_item_list));
+
+    // Custom Widget
+    check_tamper->widget = widget_alloc();
+    view_dispatcher_add_view(
+        check_tamper->view_dispatcher,
+        CheckTamperViewWidget,
+        widget_get_view(check_tamper->widget));
+
     // Generator
     check_tamper->generator = NULL;
 
@@ -95,25 +155,6 @@ CheckTamper* check_tamper_alloc() {
 
 void check_tamper_free(CheckTamper* check_tamper) {
     furi_assert(check_tamper);
-
-    if(check_tamper->rpc_state == CheckTamperRpcStateEmulating) {
-        // Stop worker
-        nfc_worker_stop(check_tamper->worker);
-    } else if(check_tamper->rpc_state == CheckTamperRpcStateEmulated) {
-        // Stop worker
-        nfc_worker_stop(check_tamper->worker);
-        // Save data in shadow file
-        if(furi_string_size(check_tamper->dev->load_path)) {
-            nfc_device_save_shadow(
-                check_tamper->dev, furi_string_get_cstr(check_tamper->dev->load_path));
-        }
-    }
-
-    if(check_tamper->rpc_ctx) {
-        rpc_system_app_send_exited(check_tamper->rpc_ctx);
-        rpc_system_app_set_callback(check_tamper->rpc_ctx, NULL, NULL);
-        check_tamper->rpc_ctx = NULL;
-    }
 
     // Nfc device
     nfc_device_free(check_tamper->dev);
@@ -129,6 +170,31 @@ void check_tamper_free(CheckTamper* check_tamper) {
     // Popup
     view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewPopup);
     popup_free(check_tamper->popup);
+
+    // Loading
+    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewLoading);
+    loading_free(check_tamper->loading);
+
+    // TextInput
+    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewTextInput);
+    text_input_free(check_tamper->text_input);
+
+    // ByteInput
+    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewByteInput);
+    byte_input_free(check_tamper->byte_input);
+
+    // TextBox
+    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewTextBox);
+    text_box_free(check_tamper->text_box);
+    furi_string_free(check_tamper->text_box_store);
+
+    // Variable Item List
+    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewVarItemList);
+    variable_item_list_free(check_tamper->variable_item_list);
+
+    // Custom Widget
+    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewWidget);
+    widget_free(check_tamper->widget);
 
     // Worker
     nfc_worker_stop(check_tamper->worker);
@@ -173,14 +239,12 @@ static bool nfc_is_hal_ready() {
 }
 
 int32_t check_tamper_app(void* p) {
-    if(!nfc_is_hal_ready()) return 0;
+    UNUSED(p);
+    //if(!nfc_is_hal_ready()) return 0;
 
     CheckTamper* check_tamper = check_tamper_alloc();
 
     FURI_LOG_E(TAG, "Start debugging");
-
-    view_dispatcher_attach_to_gui(
-        check_tamper->view_dispatcher, check_tamper->gui, ViewDispatcherTypeFullscreen);
     FURI_LOG_E(TAG, "1");
     scene_manager_next_scene(check_tamper->scene_manager, check_tamperSceneStart);
     FURI_LOG_E(TAG, "2");
