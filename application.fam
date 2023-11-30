@@ -2,17 +2,23 @@
 
 App(
     appid="check_tamper",  # Must be unique
-    name="Check_tamper",  # Displayed in menus
+    name="Check tamper",  # Displayed in menus
     apptype=FlipperAppType.EXTERNAL,
     entry_point="check_tamper_app",
-    stack_size=2 * 1024,
+    stack_size=3 * 1024,
     sources=[
         "*.c",
+    ],
+    fap_private_libs=[
+        Lib(
+            name="ST25",
+            cflags=["-Wno-error"],
+        ),
     ],
     fap_libs=["assets"],
     requires=["gui"],
     targets=["f7"],
-    fap_category="Examples",
+    fap_category="NFC",
     # Optional values
     # fap_version="0.1",
     fap_icon="icon.png",  # 10x10 1-bit PNG

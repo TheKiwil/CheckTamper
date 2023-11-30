@@ -61,9 +61,9 @@ void check_tamper_show_loading_popup(void* context, bool show) {
 }
 
 CheckTamper* check_tamper_alloc() {
-    CheckTamper* check_tamper = malloc(sizeof(check_tamper));
+    CheckTamper* check_tamper = malloc(sizeof(CheckTamper));
 
-    check_tamper->worker = nfc_worker_alloc();
+    check_tamper->worker = st25_worker_alloc();
     check_tamper->view_dispatcher = view_dispatcher_alloc();
     check_tamper->scene_manager = scene_manager_alloc(&check_tamper_scene_handlers, check_tamper);
     view_dispatcher_enable_queue(check_tamper->view_dispatcher);
@@ -74,8 +74,14 @@ CheckTamper* check_tamper_alloc() {
         check_tamper->view_dispatcher, check_tamper_back_event_callback);
 
     // Nfc device
-    check_tamper->dev = nfc_device_alloc();
-    furi_string_set(check_tamper->dev->folder, check_tamper_APP_FOLDER);
+    //FuriHalNfcDevData* _NfcDevData = malloc(sizeof(FuriHalNfcDevData));
+    //check_tamper->dev_edit_data = _NfcDevData;
+
+    ST25Data* st25_data = malloc(sizeof(ST25Data));
+    check_tamper->st25_data = st25_data;
+    //memset(check_tamper->dev_edit_data->uid, 0, sizeof(check_tamper->dev_edit_data->uid));
+    //check_tamper->dev = st25_device_alloc();
+    //furi_string_set(check_tamper->dev->folder, check_tamper_APP_FOLDER);
 
     // Open GUI record
     check_tamper->gui = furi_record_open(RECORD_GUI);
@@ -92,129 +98,49 @@ CheckTamper* check_tamper_alloc() {
         CheckTamperViewMenu,
         submenu_get_view(check_tamper->submenu));
 
-    // Dialog
-    check_tamper->dialog_ex = dialog_ex_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewDialogEx,
-        dialog_ex_get_view(check_tamper->dialog_ex));
-
     // Popup
     check_tamper->popup = popup_alloc();
     view_dispatcher_add_view(
         check_tamper->view_dispatcher, CheckTamperViewPopup, popup_get_view(check_tamper->popup));
-
-    // Loading
-    check_tamper->loading = loading_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewLoading,
-        loading_get_view(check_tamper->loading));
-
-    // Text Input
-    check_tamper->text_input = text_input_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewTextInput,
-        text_input_get_view(check_tamper->text_input));
-
-    // Byte Input
-    check_tamper->byte_input = byte_input_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewByteInput,
-        byte_input_get_view(check_tamper->byte_input));
-
-    // TextBox
-    check_tamper->text_box = text_box_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewTextBox,
-        text_box_get_view(check_tamper->text_box));
-    check_tamper->text_box_store = furi_string_alloc();
-
-    // Variable Item List
-    check_tamper->variable_item_list = variable_item_list_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewVarItemList,
-        variable_item_list_get_view(check_tamper->variable_item_list));
-
-    // Custom Widget
-    check_tamper->widget = widget_alloc();
-    view_dispatcher_add_view(
-        check_tamper->view_dispatcher,
-        CheckTamperViewWidget,
-        widget_get_view(check_tamper->widget));
-
-    // Generator
-    check_tamper->generator = NULL;
 
     return check_tamper;
 }
 
 void check_tamper_free(CheckTamper* check_tamper) {
     furi_assert(check_tamper);
-
+    FURI_LOG_T(TAG, "StopT1");
     // Nfc device
-    nfc_device_free(check_tamper->dev);
-
+    //st25_device_free(check_tamper->dev);
+    free(&check_tamper->st25_data);
+    FURI_LOG_T(TAG, "StopT2");
     // Submenu
     view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewMenu);
     submenu_free(check_tamper->submenu);
-
-    // DialogEx
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewDialogEx);
-    dialog_ex_free(check_tamper->dialog_ex);
-
+    FURI_LOG_T(TAG, "StopT3");
     // Popup
     view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewPopup);
     popup_free(check_tamper->popup);
-
-    // Loading
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewLoading);
-    loading_free(check_tamper->loading);
-
-    // TextInput
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewTextInput);
-    text_input_free(check_tamper->text_input);
-
-    // ByteInput
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewByteInput);
-    byte_input_free(check_tamper->byte_input);
-
-    // TextBox
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewTextBox);
-    text_box_free(check_tamper->text_box);
-    furi_string_free(check_tamper->text_box_store);
-
-    // Variable Item List
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewVarItemList);
-    variable_item_list_free(check_tamper->variable_item_list);
-
-    // Custom Widget
-    view_dispatcher_remove_view(check_tamper->view_dispatcher, CheckTamperViewWidget);
-    widget_free(check_tamper->widget);
-
+    FURI_LOG_T(TAG, "StopT4");
     // Worker
-    nfc_worker_stop(check_tamper->worker);
-    nfc_worker_free(check_tamper->worker);
-
+    st25_worker_stop(check_tamper->worker);
+    st25_worker_free(check_tamper->worker);
+    FURI_LOG_T(TAG, "StopT5");
     // View Dispatcher
     view_dispatcher_free(check_tamper->view_dispatcher);
-
+    FURI_LOG_T(TAG, "StopT6");
     // Scene Manager
     scene_manager_free(check_tamper->scene_manager);
-
+    FURI_LOG_T(TAG, "StopT7");
     // GUI
     furi_record_close(RECORD_GUI);
     check_tamper->gui = NULL;
-
+    FURI_LOG_T(TAG, "StopT8");
     // Notifications
     furi_record_close(RECORD_NOTIFICATION);
     check_tamper->notifications = NULL;
-
+    FURI_LOG_T(TAG, "StopT9");
     free(check_tamper);
+    FURI_LOG_T(TAG, "StopT10");
 }
 
 static bool nfc_is_hal_ready() {
@@ -240,18 +166,18 @@ static bool nfc_is_hal_ready() {
 
 int32_t check_tamper_app(void* p) {
     UNUSED(p);
-    //if(!nfc_is_hal_ready()) return 0;
+    if(!nfc_is_hal_ready()) return 0;
 
     CheckTamper* check_tamper = check_tamper_alloc();
 
-    FURI_LOG_E(TAG, "Start debugging");
-    FURI_LOG_E(TAG, "1");
-    scene_manager_next_scene(check_tamper->scene_manager, check_tamperSceneStart);
-    FURI_LOG_E(TAG, "2");
-    view_dispatcher_run(check_tamper->view_dispatcher);
-    FURI_LOG_E(TAG, "3");
+    FURI_LOG_T(TAG, "Start app check tamper");
 
+    scene_manager_next_scene(check_tamper->scene_manager, check_tamperSceneStart);
+    view_dispatcher_run(check_tamper->view_dispatcher);
+
+    FURI_LOG_T(TAG, "Stop1");
     check_tamper_free(check_tamper);
+    FURI_LOG_T(TAG, "Stop2");
 
     return 0;
 }

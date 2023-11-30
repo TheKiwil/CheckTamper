@@ -24,7 +24,7 @@ void check_tamper_scene_start_on_enter(void* context) {
     submenu_add_item(
         submenu, "Read", SubmenuIndexRead, check_tamper_scene_start_submenu_callback, check_tamper);
 
-    nfc_device_clear(check_tamper->dev);
+    //st25_device_clear(check_tamper->dev);
     view_dispatcher_switch_to_view(check_tamper->view_dispatcher, CheckTamperViewMenu);
 }
 
@@ -34,14 +34,11 @@ bool check_tamper_scene_start_on_event(void* context, SceneManagerEvent event) {
 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == SubmenuIndexRead) {
-            FURI_LOG_E(TAG, "S1");
             scene_manager_set_scene_state(
                 check_tamper->scene_manager, check_tamperSceneStart, SubmenuIndexRead);
-            check_tamper->dev->dev_data.read_mode = NfcReadModeAuto;
-            FURI_LOG_E(TAG, "S2");
+            //check_tamper->dev_edit_data.read_mode = NfcReadModeAuto;
             scene_manager_next_scene(check_tamper->scene_manager, check_tamperSceneMain);
             dolphin_deed(DolphinDeedNfcRead);
-            FURI_LOG_E(TAG, "S3");
             consumed = true;
         }
     }
