@@ -72,6 +72,7 @@ bool st25_get_random(FuriHalNfcDevData* dev_data, ST25Data* st25_data) {
 
     if(ret) {
         if(cmd.rx_bits < 5 * 8) return false;
+        if(cmd.rx_data[0] != 0x00) return false;
 
         if(st25_data != NULL) {
             st25_data->rand[0] = cmd.rx_data[1];
@@ -117,6 +118,7 @@ bool st25_present_password(FuriHalNfcDevData* dev_data, ST25Data* st25_data, uin
 
     if(ret) {
         if(cmd.rx_bits < 3 * 8) return false;
+        if(cmd.rx_data[0] != 0x00) return false;
     }
 
     return ret;
@@ -146,10 +148,9 @@ bool st25_read_config(
 
     ret = st25_command(&cmd);
     if(ret) {
-        //FURI_LOG_D(TAG, "bits=%d, val=%04x", cmd.rx_bits, cmd.rx_data[0]);
         if(cmd.rx_bits < 4 * 8) return false;
         if(cmd.rx_data[0] != 0x00) return false;
-        FURI_LOG_D(TAG, "OK command");
+
         memcpy(&st25_data->data, &cmd.rx_data[1], (cmd.rx_bits / 8) - 3);
     }
 

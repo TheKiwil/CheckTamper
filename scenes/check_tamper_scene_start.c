@@ -1,13 +1,10 @@
 #include "../check_tamper_i.h"
-#include <lib/nfc/nfc_worker_i.h>
+//#include <lib/nfc/nfc_worker_i.h>
 #include <dolphin/dolphin.h>
 
 enum SubmenuIndex {
-    SubmenuIndexRead,
-    SubmenuIndexDetectReader,
-    SubmenuIndexSaved,
-    SubmenuIndexExtraAction,
-    SubmenuIndexAddManually,
+    SubmenuIndexCheckTamper,
+    SubmenuIndexPassword,
     SubmenuIndexDebug,
 };
 
@@ -22,7 +19,18 @@ void check_tamper_scene_start_on_enter(void* context) {
     Submenu* submenu = check_tamper->submenu;
 
     submenu_add_item(
-        submenu, "Read", SubmenuIndexRead, check_tamper_scene_start_submenu_callback, check_tamper);
+        submenu,
+        "Check tamper",
+        SubmenuIndexCheckTamper,
+        check_tamper_scene_start_submenu_callback,
+        check_tamper);
+
+    submenu_add_item(
+        submenu,
+        "Password (02KC)",
+        SubmenuIndexPassword,
+        check_tamper_scene_start_submenu_callback,
+        check_tamper);
 
     //st25_device_clear(check_tamper->dev);
     view_dispatcher_switch_to_view(check_tamper->view_dispatcher, CheckTamperViewMenu);
@@ -33,12 +41,16 @@ bool check_tamper_scene_start_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == SubmenuIndexRead) {
+        if(event.event == SubmenuIndexCheckTamper) {
             scene_manager_set_scene_state(
-                check_tamper->scene_manager, check_tamperSceneStart, SubmenuIndexRead);
-            //check_tamper->dev_edit_data.read_mode = NfcReadModeAuto;
+                check_tamper->scene_manager, check_tamperSceneStart, SubmenuIndexCheckTamper);
             scene_manager_next_scene(check_tamper->scene_manager, check_tamperSceneMain);
             dolphin_deed(DolphinDeedNfcRead);
+            consumed = true;
+        } else if(event.event == SubmenuIndexPassword) {
+            scene_manager_set_scene_state(
+                check_tamper->scene_manager, check_tamperSceneStart, SubmenuIndexCheckTamper);
+            scene_manager_next_scene(check_tamper->scene_manager, check_tamperScenePassword);
             consumed = true;
         }
     }

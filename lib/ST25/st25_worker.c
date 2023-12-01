@@ -18,15 +18,12 @@ ST25Worker* st25_worker_alloc() {
     st25_worker->callback = NULL;
     st25_worker->context = NULL;
     st25_worker->event_data = NULL;
-    //st25_worker->storage = furi_record_open(RECORD_STORAGE);
 
     // Initialize rfal
     while(furi_hal_nfc_is_busy()) {
         furi_delay_ms(10);
     }
     st25_worker_change_state(st25_worker, ST25WorkerStateReady);
-
-    //st25_worker->reader_analyzer = reader_analyzer_alloc(st25_worker->storage);
 
     return st25_worker;
 }
@@ -195,9 +192,12 @@ void st25_worker_check_tamper(ST25Worker* st25_worker) {
                 FURI_LOG_I(TAG, "NfcV detected");
                 if(st25_worker_read_tamper(st25_worker)) {
                     FURI_LOG_I(TAG, "st25_worker_check_tamper success");
+                    event = ST25WorkerEventCheckTamperST25;
+                } else {
+                    FURI_LOG_I(TAG, "st25_worker_check_tamper failed");
+                    event = ST25WorkerEventFail;
                 }
 
-                event = ST25WorkerEventCheckTamperST25;
                 break;
             } else {
                 FURI_LOG_I(TAG, "Uncompatible tag");

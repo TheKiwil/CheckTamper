@@ -14,6 +14,7 @@
 
 #include <gui/modules/submenu.h>
 #include <gui/modules/popup.h>
+#include <gui/modules/byte_input.h>
 
 #include "lib/ST25/st25_worker.h"
 #include "lib/ST25/st25.h"
@@ -41,6 +42,7 @@ struct CheckTamper {
     // Common Views
     Submenu* submenu;
     Popup* popup;
+    ByteInput* byte_input;
 };
 
 typedef enum {
@@ -56,6 +58,8 @@ typedef enum {
     CheckTamperViewDictAttack,
     CheckTamperViewDetectReader,
 } CheckTamperView;
+
+typedef enum { CheckTamperCustomEventByteInputDone } CheckTamperCustomEvent;
 
 CheckTamper* check_tamper_alloc();
 

@@ -1,6 +1,5 @@
 #include "../check_tamper_i.h"
 #include <dolphin/dolphin.h>
-#include <check_tamper_icons.h>
 
 typedef enum {
     check_tamperSceneMainStateIdle,
@@ -10,19 +9,14 @@ typedef enum {
     check_tamperSceneMainStateClose,
     check_tamperSceneMainStateNotSupportedCard,
     check_tamperSceneMainStateCheckTamper,
+    check_tamperSceneMainStateFailed,
 } check_tamperSceneMainState;
 
 static bool check_tamper_scene_main_worker_callback(ST25WorkerEvent event, void* context) {
     CheckTamper* check_tamper = context;
-    FURI_LOG_T(TAG, "event = %d", check_tamper->st25_data->tamper_state);
 
-    FURI_LOG_E(TAG, "event");
-    //if(event == check_tamperSceneMainStateEndReading) {
-    //popup_set_text(check_tamper->popup, "End", 97, 24, AlignCenter, AlignTop);
-    //memcpy(data->key_privacy, check_tamper->byte_input_store, 4);
-    //} else {
     view_dispatcher_send_custom_event(check_tamper->view_dispatcher, event);
-    //}
+
     return true;
 }
 
@@ -32,7 +26,6 @@ void check_tamper_scene_main_popup_callback(void* context) {
 }
 
 void check_tamper_scene_main_set_state(CheckTamper* check_tamper, check_tamperSceneMainState state) {
-    //FuriHalNfcDevData* nfc_data = check_tamper->st25_data->nfc_data;
     ST25Data* st25_data = check_tamper->st25_data;
 
     uint32_t curr_state =
@@ -41,12 +34,24 @@ void check_tamper_scene_main_set_state(CheckTamper* check_tamper, check_tamperSc
         Popup* popup = check_tamper->popup;
         if(state == check_tamperSceneMainStateDetecting) {
             popup_reset(popup);
-            popup_set_text(
-                popup, "Put figurine on\nFlipper's back", 97, 24, AlignCenter, AlignTop);
+            popup_set_text(popup, "Put tag on\nFlipper's back", 97, 24, AlignCenter, AlignTop);
             popup_set_icon(popup, 0, 8, &I_NFC_manual_60x50);
+        } else if(state == check_tamperSceneMainStateFailed) {
+            popup_reset(popup);
+
+            popup_set_header(popup, "Failed !", 30, 15, AlignCenter, AlignTop);
+            popup_set_icon(popup, 73, 20, &I_DolphinCommon_56x48);
+
+            notification_message(check_tamper->notifications, &sequence_single_vibro);
+            popup_set_context(popup, check_tamper);
+            popup_set_callback(popup, check_tamper_scene_main_popup_callback);
+            popup_set_timeout(popup, 1500);
+
+            view_dispatcher_switch_to_view(check_tamper->view_dispatcher, CheckTamperViewPopup);
+            dolphin_deed(DolphinDeedNfcReadSuccess);
         } else if(state == check_tamperSceneMainStateStartReading) {
             popup_reset(popup);
-            popup_set_header(popup, "Start\nreading", 94, 3, AlignCenter, AlignTop);
+            popup_set_header(popup, "Start checking", 64, 24, AlignCenter, AlignTop);
             notification_message(check_tamper->notifications, &sequence_single_vibro);
 
             //popup_set_icon(popup, 0, 6, &I_RFIDDolphinSuccess_108x57);
@@ -134,6 +139,9 @@ bool check_tamper_scene_main_on_event(void* context, SceneManagerEvent event) {
         } else if(event.event == ST25WorkerEventWrongCardDetected) {
             check_tamper_scene_main_set_state(
                 check_tamper, check_tamperSceneMainStateNotSupportedCard);
+        } else if(event.event == ST25WorkerEventFail) {
+            check_tamper_scene_main_set_state(check_tamper, check_tamperSceneMainStateFailed);
+            consumed = true;
         } else if(event.event == ST25WorkerEventExit) {
             consumed = scene_manager_search_and_switch_to_previous_scene(
                 check_tamper->scene_manager, check_tamperSceneStart);
