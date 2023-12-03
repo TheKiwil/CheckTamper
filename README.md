@@ -13,8 +13,8 @@ En pratique, cela signifie que le dispositif NFC est équipé de mécanismes de 
 L'objectif principal du tamper evident en NFC est de garantir l'intégrité et la sécurité des informations échangées via la communication NFC en s'assurant que le dispositif n'a pas été compromis ou altéré de manière malveillante. Cela est particulièrement crucial dans des applications sensibles où la sécurité des données et la confiance dans le dispositif sont primordiales.
 ## Example 
 
-Source : https://www.atlasrfidstore.com/
-<br/>
+Source : https://www.atlasrfidstore.com/<br />
+
 ![Tamper evident tag](https://www.atlasrfidstore.com/product_images/uploaded_images/tamper-evident-rfid-tags-1.jpg)
 
 ## Author
